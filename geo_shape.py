@@ -1,3 +1,4 @@
+#-*- coding: cp936 -*- 
 try:
 	from osgeo import gdal, ogr, osr
 except ImportError:
@@ -16,6 +17,7 @@ class geo_layer():
 		self.layer_defn = layer.GetLayerDefn()
 		self.spatial_ref = layer.GetSpatialRef()
 		self.extent = layer.GetExtent()
+
 		
 	def select_by_pathrow(self, pathrow,f_out):
 		driver = ogr.GetDriverByName("ESRI Shapefile")
@@ -61,6 +63,69 @@ class geo_layer():
 			#gdal.RasterizeLayer(ras_mask, [1], self.layer, None, None, [1], ['ALL_TOUCHED=TRUE'])
 		else:
 			gdal.RasterizeLayer(ras_mask, [1], self.layer,options = ["ATTRIBUTE=" + field])
+			
+	def dic_all_fields(self,fd_ui,lst_exclude = []):
+		dfn_lyr_ref = self.layer.GetLayerDefn()  
+		n_fd = dfn_lyr_ref.GetFieldCount()
+		lst_fields = []
+		lst_exclude.append(fd_ui)
+		for i in range(n_fd):
+			#---- retrieve old field
+			fd_ref =dfn_lyr_ref.GetFieldDefn(i)
+			name_fd = fd_ref.GetNameRef()
+			if not name_fd in lst_exclude:
+				lst_fields.append(name_fd)
+			
+		dic_ui_other = {}
+		n_ft = self.layer.GetFeatureCount()
+		for i in xrange(n_ft):
+			ft = self.layer.GetFeature(i)
+			ui = ft.GetField(fd_ui)
+			lst_fd = []
+			for name_fd in lst_fields:
+				cnt_fd = ft.GetField(name_fd)
+				lst_fd.append(cnt_fd)
+			dic_ui_other[ui] = lst_fd
+		return dic_ui_other,lst_fields
+	
+	def get_fields_header(self):
+		dfn_lyr = self.layer.GetLayerDefn()  
+		nfd = dfn_lyr.GetFieldCount()
+		lst_fds = []
+		for i in range(nfd):
+			fd_ref =dfn_lyr.GetFieldDefn(i)
+			lst_fds.append(fd_ref.GetNameRef())
+		return lst_fds
+	
+	def add_field(self,field,name_ui,dic_ui_fd,i_dic,dic_nm_setting):
+		lst_fds = self.get_fields_header()
+		if not field in lst_fds:
+			dfn_fd = ogr.FieldDefn(field, dic_nm_setting['type'])
+			dfn_fd.SetWidth(dic_nm_setting['width'])
+			dfn_fd.SetPrecision(dic_nm_setting['precision'])
+			self.layer.CreateField(dfn_fd)
+		
+		n_ft = self.layer.GetFeatureCount()
+		for i in xrange(n_ft):
+			ft = self.layer.GetFeature(i)
+			k_ui = ft.GetField(name_ui)
+			try:
+				value = dic_ui_fd[k_ui][i_dic]
+			except:
+				print name_ui,k_ui,'doesn\'t have',field,'data'
+				value = False
+			if dic_nm_setting['type'] == ogr.OFTReal:
+				cnt_fd = float(value)
+			elif dic_nm_setting['type'] == ogr.OFTInteger:
+				cnt_fd = int(value)
+			else:
+				cnt_fd = value
+			ft.SetField(field, cnt_fd)
+			self.layer.SetFeature(ft)
+			ft.Destroy()
+	
+	
+	
 	
 class geo_shape():
 	def __init__(self, f, shapefile):
@@ -69,11 +134,11 @@ class geo_shape():
 		self.layer_num = self.shapefile.GetLayerCount()
 
 	@classmethod
-	def open(cls, f):
+	def open(cls, f,updating=False):
 		gdal.SetConfigOption("GDAL_FILENAME_IS_UTF8","NO")
 		gdal.SetConfigOption("SHAPE_ENCODING","")
 		ogr.RegisterAll()
-		return cls(f, ogr.Open(f))
+		return cls(f, ogr.Open(f,update=updating))
 	
 
 	def get_layer(self, layer_num=0):

@@ -1,3 +1,4 @@
+#-*- coding: cp936 -*- 
 try:
 	from osgeo import gdal, ogr, osr
 except ImportError:
@@ -61,6 +62,33 @@ class geo_layer():
 			#gdal.RasterizeLayer(ras_mask, [1], self.layer, None, None, [1], ['ALL_TOUCHED=TRUE'])
 		else:
 			gdal.RasterizeLayer(ras_mask, [1], self.layer,options = ["ATTRIBUTE=" + field])
+			
+	def dic_all_fields(self,fd_ui,lst_exclude = []):
+		dfn_lyr_ref = self.layer.GetLayerDefn()  
+		n_fd = dfn_lyr_ref.GetFieldCount()
+		lst_fields = []
+		lst_exclude.append(fd_ui)
+		for i in range(n_fd):
+			#---- retrieve old field
+			fd_ref =dfn_lyr_ref.GetFieldDefn(i)
+			name_fd = fd_ref.GetNameRef()
+			if not name_fd in lst_exclude:
+				lst_fields.append(name_fd)
+			
+		dic_ui_other = {}
+		n_ft = self.layer.GetFeatureCount()
+		for i in xrange(n_ft):
+			ft = self.layer.GetFeature(i)
+			ui = ft.GetField(fd_ui)
+			lst_fd = []
+			for name_fd in lst_fields:
+				cnt_fd = ft.GetField(name_fd)
+				lst_fd.append(cnt_fd)
+			dic_ui_other[ui] = lst_fd
+		return dic_ui_other,lst_fields
+	
+	
+	
 	
 class geo_shape():
 	def __init__(self, f, shapefile):
@@ -105,6 +133,7 @@ def unifying_code(f_qtv, f_qtv_fix):
 		ft_fix.SetField('Code_uniq',i+1001)
 		layer_fix.SetFeature(ft_fix)
 	ds_fix.Destroy()
+	print f_qtv_fix
 	
 	
 

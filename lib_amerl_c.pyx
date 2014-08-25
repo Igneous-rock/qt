@@ -45,7 +45,7 @@ def spread_lake_by_seeds(f_wi,f_mask, f_snow, dic_para):
 			v_mask = m_pure[row,col]
 			if v_mask == v_nodata: 
 				continue
-			elif v_mask > 0 and m_wi[row,col] < t_land:#t_pure:
+			elif v_mask > 0 and m_wi[row,col] < 1200:#t_land:#t_pure:
 				m_pure[row,col] = 0
 				m_wi[row,col] = 1
 			elif v_mask == 0 and m_snow[row,col] >= t_snow:
@@ -99,6 +99,7 @@ def seg_by_watershed(np.ndarray[DTYPE_t, ndim=2] m_pure, f_wi, f_snow, dic_para)
 		for col in xrange(1,ext_col-1):
 			v_p = m_pure[row,col]
 			if v_p >= 0:
+				if m_wi[row,col] > t_water: m_wi[row,col] = t_water
 				m_mask[row,col] = 1
 				if v_p == 0:
 					if m_wi[row,col] < t_land or m_snow[row,col] >= t_snow:
@@ -130,6 +131,7 @@ def fill_hole(dic_para,f_amerl,f_mndwi,f_fill_hole):
 	bnd_img = ref_img.get_band()
 	cdef np.ndarray[DTYPE_t, ndim=2] m_lk = bnd_img.read()
 	
+	cdef int t_water = dic_para['pure_water']
 	cdef int t_land = dic_para['land']
 	cdef unsigned int ext_row = m_lk.shape[0]
 	cdef unsigned int ext_col = m_lk.shape[1]

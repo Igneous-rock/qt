@@ -60,7 +60,27 @@ def run_exe(cmd):
 		return None
 	return _rs
 
+def csv2dic(f_csv,k_ui,sw_key_int = False):
+	import csv
+	dic_info = {}
+	reader=csv.reader(open(f_csv, 'rb'))
+	header = reader.next()
+	n_head = len(header)
 
+	lst_vname = []
+	for i in range(n_head):
+		if header[i] == k_ui:
+			i_k = i
+		else:
+			lst_vname.append(header[i])
+
+	for item in reader:
+		k = item[i_k] if sw_key_int == False else int(item[i_k])
+		del item[i_k]
+		dic_info[k] = item
+
+	return dic_info,lst_vname
+	
 
 #----------------------------------- img type
 _str_GDALconst = '''GDT_Byte = 1

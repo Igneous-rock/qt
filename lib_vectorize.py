@@ -3,6 +3,7 @@ import ogr,gdal,osr
 import os
 import lib_IO, lib_Global_const
 import geo_shape as GS
+import lib_overlaps
 #------------------ global variable
 G_dic_sensor = {'L5':'TM','L7':'ETM+','L8':'OLI'}
 #----------------------------------------------------------------------  by scene
@@ -106,7 +107,7 @@ def sub__resotre_fields(lyr_ref,layer_out):
 		fd_ref =dfn_lyr_ref.GetFieldDefn(i)
 		
 		name_fd = fd_ref.GetNameRef()
-		if name_fd in ['Area','Altitude','湖泊面积']: continue
+		if name_fd in ['Area','湖泊面积']: continue
 		type_field = fd_ref.GetType()#fd_ref.GetFieldTypeName(fd_ref.GetType())
 		
 		width_fd = fd_ref.GetWidth()
@@ -134,8 +135,36 @@ def sub__resotre_fields(lyr_ref,layer_out):
 	
 	return layer_out.GetLayerDefn(),ls_fields
 	
+def index_area_by_ui(f_ref,code):
+	dic_ui_area = {}
+	ref_shp = GS.geo_shape.open(f_ref)
+	lyr_ref = ref_shp.get_layer(0)
 	
-def dissolve_polygons_shp(f_merged,f_ref,f_dislv):
+	n_ft_m = lyr_ref.layer.GetFeatureCount()
+	for i in xrange(n_ft_m):
+		ft_ref = lyr_ref.layer.GetFeature(i)
+		s_code_u = ft_ref.GetField(code)
+
+		geom = ft_ref.GetGeometryRef()
+		r_area = geom.Area() / 1000000.0
+		
+		dic_ui_area[s_code_u] = r_area
+	return dic_ui_area
+
+def sub__screen_pr_for_within(ls_i_all,lyr_merge,dic_ui_wopr,k):
+	ls_i = []
+	while ls_i_all:
+		i_ft = ls_i_all.pop(0)
+		ft_mgs = lyr_merge.layer.GetFeature(i_ft)
+		pr = ft_mgs.GetField('PathRow')
+		if pr in dic_ui_wopr[k][1]:
+			ls_i.append(i_ft)
+		#if k==1958: 
+		#	print pr,dic_ui_wopr[k],dic_ui_wopr[k][1]
+	return ls_i
+	
+	
+def dissolve_polygons_shp(f_merged,f_ref,dic_ui_wopr,f_dislv):
 	ref_merge = GS.geo_shape.open(f_merged)
 	lyr_merge = ref_merge.get_layer(0)
 	proj_in = lyr_merge.spatial_ref
@@ -143,6 +172,8 @@ def dissolve_polygons_shp(f_merged,f_ref,f_dislv):
 	ref_ref = GS.geo_shape.open(f_ref)
 	lyr_ref = ref_ref.get_layer(0)
 	
+	#dic_ui_area = index_area_by_ui(f_ref,'Code_uniq')
+
 	#---- create new
 	ogr.RegisterAll()
 	driver = ogr.GetDriverByName("ESRI Shapefile")
@@ -161,8 +192,17 @@ def dissolve_polygons_shp(f_merged,f_ref,f_dislv):
 	ks.sort()
 	for k in ks:
 		ls_i = dic_merge_cn[k]
-		#print k,len(ls_i)
-		i_ft = ls_i.pop(0)
+		print k,len(ls_i)
+		#==== screen geom from unwanted pathrow
+		if dic_ui_wopr[k][0] == 'within':
+			ls_i = sub__screen_pr_for_within(ls_i,lyr_merge,dic_ui_wopr,k)
+		
+		
+		#==== /screen
+		if len(ls_i) <> 0:
+			i_ft = ls_i.pop(0)
+		else:
+			continue
 		
 		#---- dissolve
 		ft_mgs = lyr_merge.layer.GetFeature(i_ft)
@@ -217,6 +257,7 @@ def merge_lakes_shp(p_out,p_vector):
 	name_wi = lib_Global_const.G_water_index
 	f_merged = p_vector + 'merged_' + name_wi[:-4] + '.shp'
 	f_ref = p_vector + lib_Global_const.G_base_shp[:-4] + '_ui.shp'
+
 	#'''
 	ls_pr = lib_IO.getDirList( p_out ,'p...r...')
 
@@ -242,9 +283,11 @@ def merge_lakes_shp(p_out,p_vector):
 		#print f
 	print f_merged
 	#'''
+	f_pr = p_vector + 'qt2000_tile.shp'
 
+	dic_ui_wopr = lib_overlaps.analysis_choose_or_union(f_ref,f_pr)
 	f_dislv = p_vector + 'dissolved_' + name_wi[:-4] + '.shp'
-	dissolve_polygons_shp(f_merged,f_ref,f_dislv)
+	dissolve_polygons_shp(f_merged,f_ref,dic_ui_wopr,f_dislv)
 	
 
 	

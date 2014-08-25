@@ -18,12 +18,12 @@ def extract_water(P_out_scene):
 
 	f_amerl = P_out_scene + 'ws_' + name_wi
 	f_mask = P_out_scene + 'mask.img'
-	
+	#'''
 	if os.path.isfile(f_slope):
 		lib_amerl_slope_c.amerl_slope(f_wi,f_mask, f_b4,f_slope,G_dic_para,f_amerl)
 	else:
 		lib_amerl_c.amerl(f_wi,f_mask, f_b4,G_dic_para,f_amerl)
-
+	#'''
 	#f_mndwi = P_out_scene + 'mndwi.img'
 	f_fill_hole = P_out_scene + 'fill_' + name_wi
 	lib_amerl_c.fill_hole(G_dic_para,f_amerl,f_wi,f_fill_hole)

@@ -47,7 +47,7 @@ def spread_lake_by_seeds(f_wi,f_mask, f_snow,f_slope, dic_para):
 			v_mask = m_pure[row,col]
 			if v_mask == v_nodata: 
 				continue
-			elif v_mask > 0 and m_wi[row,col] < t_land:#t_pure:#
+			elif v_mask > 0 and m_wi[row,col] < 1200:#t_land:#t_pure:#
 				m_pure[row,col] = 0
 				m_wi[row,col] = 1
 			elif v_mask == 0:
@@ -100,6 +100,7 @@ def seg_by_watershed(np.ndarray[DTYPE_t, ndim=2] m_pure, f_wi, f_snow,f_slope, d
 			v_p = m_pure[row,col]
 			if v_p == v_nodata:
 				continue
+			if m_wi[row,col] > t_water: m_wi[row,col] = t_water
 			if v_p > 0:
 				m_mask[row,col] = 1
 			if v_p == 0:

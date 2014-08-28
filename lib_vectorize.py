@@ -1,7 +1,7 @@
 #-*- coding: cp936 -*- 
 import ogr,gdal,osr
 import os
-import lib_IO, lib_Global_const
+import lib_IO
 import geo_shape as GS
 import lib_overlaps
 #------------------ global variable
@@ -100,7 +100,7 @@ def sub__index_feature_by_field(_lyr):
 def sub__resotre_fields(lyr_ref,layer_out):
 	dfn_lyr_ref = lyr_ref.layer.GetLayerDefn()  
 	n_field_ref = dfn_lyr_ref.GetFieldCount()
-	i_area = 9999
+
 	ls_fields = []
 	for i in range(n_field_ref):
 		#---- retrieve old field
@@ -192,7 +192,7 @@ def dissolve_polygons_shp(f_merged,f_ref,dic_ui_wopr,f_dislv):
 	ks.sort()
 	for k in ks:
 		ls_i = dic_merge_cn[k]
-		print k,len(ls_i)
+		#print k,len(ls_i)
 		#==== screen geom from unwanted pathrow
 		if dic_ui_wopr[k][0] == 'within':
 			ls_i = sub__screen_pr_for_within(ls_i,lyr_merge,dic_ui_wopr,k)
@@ -253,17 +253,19 @@ def dissolve_polygons_shp(f_merged,f_ref,dic_ui_wopr,f_dislv):
 
 	ds_out.Destroy()
 
-def merge_lakes_shp(p_out,p_vector):
-	name_wi = lib_Global_const.G_water_index
-	f_merged = p_vector + 'merged_' + name_wi[:-4] + '.shp'
-	f_ref = p_vector + lib_Global_const.G_base_shp[:-4] + '_ui.shp'
+def merge_lakes_shp(dic_data_path):
+	p_out = dic_data_path['path_out']
+	p_vector = dic_data_path['path_vector']
+	name_wi = dic_data_path['water_index']
+	f_merged = p_vector + '/merged_' + name_wi[:-4] + '.shp'
+	f_ref = p_vector + '/' + dic_data_path['base_shp'][:-4] + '_ui.shp'
 
 	#'''
 	ls_pr = lib_IO.getDirList( p_out ,'p...r...')
 
 	fs_lake_shp = []
 	for pr in ls_pr:
-		p_pr = p_out + pr
+		p_pr = p_out + '/' + pr
 		name_scene = lib_IO.getDirList(p_pr ,'L.*')[0]
 		p_out_scene = p_pr + '/' + name_scene
 		f_lake_shp = p_out_scene + '/lakes_' + name_wi[:-4] + '.shp'
@@ -271,7 +273,6 @@ def merge_lakes_shp(p_out,p_vector):
 			fs_lake_shp.append(f_lake_shp)
 		else:
 			print 'failure on ',f_lake_shp
-	
 	
 	cmd_ogr = 'ogr2ogr -overwrite ' + f_merged + ' ' + fs_lake_shp[0]
 	_rs = lib_IO.run_exe(cmd_ogr)
@@ -283,11 +284,13 @@ def merge_lakes_shp(p_out,p_vector):
 		#print f
 	print f_merged
 	#'''
-	f_pr = p_vector + 'qt2000_tile.shp'
+	#f_pr = p_vector + 'qt2000_tile.shp'
+	f_pr = p_vector + '/requires/image_extent.shp'
 
 	dic_ui_wopr = lib_overlaps.analysis_choose_or_union(f_ref,f_pr)
-	f_dislv = p_vector + 'dissolved_' + name_wi[:-4] + '.shp'
+	f_dislv = p_vector + '/dissolved_' + name_wi[:-4] + '.shp'
 	dissolve_polygons_shp(f_merged,f_ref,dic_ui_wopr,f_dislv)
+	print f_dislv
 	
 
 	

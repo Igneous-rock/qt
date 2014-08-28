@@ -1,5 +1,11 @@
+import time,sys,os
+import geo_raster as GR
+import geo_shape as GS
+import lib_amerl_c
 
-def seed_lakes(P_out_scene,p_vector):
+def seed_lakes(P_out_scene,dic_data_path):
+	p_vector = dic_data_path['path_vector']
+	
 	str_pathrow = P_out_scene.split('/')[-2]
 	sn_pr = str_pathrow[1:4] + str_pathrow[-3:]
 
@@ -13,7 +19,7 @@ def seed_lakes(P_out_scene,p_vector):
 	f_b6 = P_out_scene + 'sr_band6_30m.img'
 	f_b7 = P_out_scene + 'sr_band7_30m.img'
 	
-	name_wi = lib_Global_const.G_water_index
+	name_wi = dic_data_path['water_index']
 	if name_wi == 'mndwi.img':
 		f_band_ir = f_b5
 	elif name_wi == 'ndwi.img':
@@ -24,15 +30,15 @@ def seed_lakes(P_out_scene,p_vector):
 	
 	#---- generate seeds
 	f_tile = P_out_scene + 'tile.shp'
-	f_china_tile = p_vector + 'wrs2_tile_proj.shp'
+	f_china_tile = p_vector + '/wrs2_tile_proj.shp'
 
 	ref_ct = GS.geo_shape.open(f_china_tile)
 	layer_ct = ref_ct.get_layer(0)
 	layer_ct.select_by_pathrow(sn_pr,f_tile)
 	
-	f_lakes = p_vector + lib_Global_const.G_base_shp[:-4] + '_ui.shp'
+	f_ref = p_vector + '/' + dic_data_path['base_shp'][:-4] + '_ui.shp'
 	f_lk_sel = P_out_scene + 'lake_sel.shp'
-	ref_lake = GS.geo_shape.open(f_lakes)
+	ref_lake = GS.geo_shape.open(f_ref)
 	layer_lk = ref_lake.get_layer(0)
 	layer_lk.select_by_shapefile(f_tile,f_lk_sel)
 
@@ -49,30 +55,3 @@ def seed_lakes(P_out_scene,p_vector):
 	lib_amerl_c.gen_seeds_grid(f_lk2k_r,f_wi,f_mask,nodata = -9999)
 
 
-
-
-
-import lib_Global_const
-import time,sys,os
-import geo_raster as GR
-import geo_shape as GS
-import lib_amerl_c
-
-def usage():
-	import optparse
-
-	_p = optparse.OptionParser()
-	_p.add_option('-i', '--path_in', dest='path_in', default = lib_Global_const.G_path_in)
-	_p.add_option('-o', '--path_out', dest='path_out', default = lib_Global_const.G_path_out)
-	_p.add_option('-o', '--G_path_vector', dest='G_path_vector', default = lib_Global_const.G_path_v)
-	
-	_opts = _p.parse_args(sys.argv[1:])[0]
-
-	return _opts
-	
-if __name__ == '__main__':
-	a = time.clock()
-	_opts = usage()
-	seed_lakes(_opts.path_out, _opts.G_path_v)
-	print time.clock() -a
-	print 'done'

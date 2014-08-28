@@ -64,11 +64,11 @@ class geo_layer():
 		else:
 			gdal.RasterizeLayer(ras_mask, [1], self.layer,options = ["ATTRIBUTE=" + field])
 			
-	def dic_all_fields(self,fd_ui,lst_exclude = []):
+	def dic_all_fields(self,str_fd_ui,lst_exclude = []):
 		dfn_lyr_ref = self.layer.GetLayerDefn()  
 		n_fd = dfn_lyr_ref.GetFieldCount()
 		lst_fields = []
-		lst_exclude.append(fd_ui)
+		lst_exclude.append(str_fd_ui)
 		for i in range(n_fd):
 			#---- retrieve old field
 			fd_ref =dfn_lyr_ref.GetFieldDefn(i)
@@ -80,7 +80,7 @@ class geo_layer():
 		n_ft = self.layer.GetFeatureCount()
 		for i in xrange(n_ft):
 			ft = self.layer.GetFeature(i)
-			ui = ft.GetField(fd_ui)
+			ui = ft.GetField(str_fd_ui)
 			lst_fd = []
 			for name_fd in lst_fields:
 				cnt_fd = ft.GetField(name_fd)

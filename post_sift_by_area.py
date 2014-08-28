@@ -76,11 +76,7 @@ def sift_by_area(f_in,f_ref,f_sift):
 
 	ds.Destroy()
 
-	
-	
-	
-	
-	
+
 	
 
 
@@ -97,7 +93,7 @@ G_t_area = 1.0
 
 import ogr,gdal,osr
 import os
-import lib_IO, lib_Global_const
+import lib_IO
 import geo_shape as GS
 import time
 

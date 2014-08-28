@@ -17,8 +17,9 @@ def amerl(f_wi,f_mask, f_snow,dic_para,f_amerl):
 	#f_ndwi = os.path.split(f_wi)[0] + '/ndwi.img'
 	#==== extract by segmentation
 	cdef np.ndarray[DTYPE_t, ndim=2] m_lake = seg_by_watershed(m_pure,f_wi, f_snow, dic_para)
+	cdef np.ndarray[DTYPE_t, ndim=2] m_out = remove_small_objects(m_lake,10,-9999)
 	
-	GR.write_raster(f_amerl, ref_wi.geo_transform, ref_wi.projection, m_lake,3)
+	GR.write_raster(f_amerl, ref_wi.geo_transform, ref_wi.projection, m_out,3)
 	print f_amerl
 
 #============================================================= first step
@@ -232,13 +233,50 @@ def gen_seeds_grid(f_lk,f_wi,f_mask,gap = 3, nodata = -9999):
 	
 
 	
+def remove_small_objects(np.ndarray[DTYPE_t, ndim=2] m_in, unsigned int size_min,int nodata,int sw_conn = 8):
+	cdef unsigned int ext_row = m_in.shape[0]
+	cdef unsigned int ext_col = m_in.shape[1]
+	cdef unsigned int out_row, out_col
+	cdef unsigned int row, col, r,c
+	cdef int r_off,c_off
 	
+	cdef int v_p,count
 	
+	cdef np.ndarray[DTYPE_t, ndim=2] m_out = np.zeros_like(m_in)
+	m_out[m_in > nodata] = 2
 	
-	
-	
-	
-	
+	if sw_conn == 4:
+		ls_rc = [(-1, 0),(0, -1),(0, 1),(1, 0)]
+	else:
+		ls_rc = [(-1, -1),(-1, 0),(-1, 1),(0, -1),(0, 1),(1, -1),(1, 0),(1, 1)]
+
+	ls_ht = []
+	for out_row in xrange(1,ext_row-1):
+		for out_col in xrange(1,ext_col-1):
+			ls_i = [[],[]]
+			v_p = m_out[out_row,out_col]
+			if v_p < 2: continue
+			m_out[out_row,out_col] = 1
+			ls_ht.append((out_row,out_col))
+			count = 0
+			while(ls_ht != []):
+				row,col = ls_ht.pop()
+				ls_i[0].append(row)
+				ls_i[1].append(col)
+				count += 1
+				for r_off,c_off in ls_rc:
+					r = <unsigned int>(<int>row + r_off)
+					c = <unsigned int>(<int>col + c_off)
+					if m_out[r,c] == 2:
+						m_out[r,c] = 1
+						ls_ht.append((r,c))
+			
+			if count <= size_min: m_out[ls_i] = 0
+			
+	for row in xrange(ext_row):
+		for col in xrange(ext_col):
+			if m_out[row,col] == 0: m_in[row,col] = -9999
+	return m_in
 	
 	
 	

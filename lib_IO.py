@@ -31,20 +31,10 @@ def getFileList(_dir,_pattern):
 	_match.sort()
 	return _match
 	
-def generateDIR(_root,_pattern_dir = '(lndsr.*)|(result)',_pattern_data = '^band[1-57].*\.tif'):
-	import os 
+
 	
-	_dirs = []
-	_dirlist = getDirList(_root,_pattern_dir)
-	for _dir in _dirlist: 
-		_path = _root + '/' + _dir
-		_filelist = getFileList(_path,_pattern_data)
-
-		for _list in _filelist:
-			_dirs.append( _list)
-
-	return _dirs
-
+	
+	
 def run_exe(cmd):
 	import subprocess
 	_p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)

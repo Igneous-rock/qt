@@ -1,8 +1,9 @@
-def fix_vector(p_vector):
+def fix_vector(dic_data_path):
 	import geo_shape as GS
 	import ogr
-	f_shp = p_vector + lib_Global_const.G_base_shp
-	f_shp_ui = p_vector + lib_Global_const.G_base_shp[:-4] + '_ui.shp'
+	p_vector = dic_data_path['path_vector']
+	f_shp = p_vector + '/' + dic_data_path['base_shp']
+	f_shp_ui = p_vector + '/' + dic_data_path['base_shp'][:-4] + '_ui.shp'
 	
 	if not os.path.isfile(f_shp_ui): 
 		GS.unifying_code(f_shp, f_shp_ui)
@@ -26,11 +27,11 @@ def copy_dem(pathrow,p_out_scene):
 	p_reserve = '/mnt/data_3t_a/jiangh/DEM/dem_pr'
 	
 	for nm_dem in nms_dem:
-		print pathrow,nm_dem
-	
 		f_in_dem = p_in_pr + '/' + nm_dem
 		f_out_dem = p_out_scene + '/' + nm_dem
 		if os.path.isfile(f_out_dem): continue
+		
+		print pathrow,nm_dem
 		if os.path.isfile(f_in_dem + '.gz'):
 			_rs = lib_IO.run_exe('gzip -d ' + f_in_dem + '.gz')
 		elif not os.path.isfile(f_in_dem):
@@ -67,9 +68,19 @@ def copy_images(f_hdf,p_out_scene):
 			
 			GR.write_raster(f_image, ref_img.geo_transform, ref_img.projection,m_band, 3)
 			print f_image
-	
+			
+def check_have_lakes_scene(p_out_scene):
+	fv_lake = p_out_scene + '/lake_sel.shp'
+	ref_ref = GS.geo_shape.open(fv_lake)
+	lyr_ref = ref_ref.get_layer(0)
+	if lyr_ref.layer.GetFeatureCount() > 0: return True
+	return False
 
-def batch_run(p_in,p_out,f_list_images,p_vector):
+def batch_run(dic_data_path):
+	p_in  = dic_data_path['path_in']
+	p_out = dic_data_path['path_out']
+	p_vector = dic_data_path['path_vector']
+	
 	#---- prepare_dir
 	ls_hdf = lib_IO.getFileList(p_in,'lndsr.*\.hdf')
 	'''
@@ -94,7 +105,7 @@ def batch_run(p_in,p_out,f_list_images,p_vector):
 		ymd = time.strftime( '%Y%m%d', t_dates )
 		p_scene = sensor + '_' + pathrow + '_' + ymd
 
-		p_out_pr = p_out + pathrow
+		p_out_pr = p_out + '/' + pathrow
 		if not os.path.isdir(p_out_pr):
 			os.mkdir(p_out_pr)
 		p_out_scene = p_out_pr + '/' + p_scene
@@ -105,21 +116,25 @@ def batch_run(p_in,p_out,f_list_images,p_vector):
 		copy_dem(pathrow,p_out_scene)
 		
 		#---- step1: extract lakes
-		seed_lakes.seed_lakes(p_out_scene,p_vector)
-		run_amerl.extract_water(p_out_scene)
+		#seed_lakes.seed_lakes(p_out_scene,dic_data_path)
+		if not check_have_lakes_scene(p_out_scene): continue
+		run_amerl.extract_water(p_out_scene,dic_data_path)
 		#---- step2: convertion
-		vectorize_lake.vectorize_by_scene(p_out_scene)
+		vectorize_lake.vectorize_by_scene(p_out_scene,dic_data_path)
 		'''
 		'''
-		#return
 	
-
+def run_region_4_wi(dic_data_path):
+	#fix_vector(dic_data_path)
+	#batch_run(dic_data_path)
+	lib_vectorize.merge_lakes_shp(dic_data_path)
 
 import lib_IO
 import os,sys
 import csv
 import time
 import geo_raster as GR
+import geo_shape as GS
 import lib_Global_const
 import lib_vectorize
 import run_amerl,seed_lakes,vectorize_lake
@@ -127,10 +142,7 @@ import run_amerl,seed_lakes,vectorize_lake
 #--------------------------------------------------------------
 if __name__ == '__main__':
 	a = time.clock()
-	#fix_vector(lib_Global_const.G_path_vector)
-	#batch_run(lib_Global_const.G_path_in,lib_Global_const.G_path_out,lib_Global_const.G_path_list_image,lib_Global_const.G_path_vector)
-	lib_vectorize.merge_lakes_shp(lib_Global_const.G_path_out, lib_Global_const.G_path_vector)
-
-
+	dic_data_path = lib_Global_const.G_dic_data_path
+	run_region_4_wi(dic_data_path)
 	print time.clock() -a
 	print 'done'

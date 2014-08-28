@@ -3,6 +3,7 @@ cimport numpy as np
 DTYPE = np.int16
 ctypedef np.int16_t DTYPE_t
 import geo_raster as GR
+import lib_amerl_c
 cimport cython
 @cython.boundscheck(False)
 	
@@ -17,7 +18,8 @@ def amerl_slope(f_wi,f_mask, f_snow,f_slope,dic_para,f_amerl):
 	#f_ndwi = os.path.split(f_wi)[0] + '/ndwi.img'
 	#==== extract by segmentation
 	cdef np.ndarray[DTYPE_t, ndim=2] m_lake = seg_by_watershed(m_pure,f_wi, f_snow,f_slope, dic_para)
-	
+	cdef np.ndarray[DTYPE_t, ndim=2] m_out = lib_amerl_c.remove_small_objects(m_lake,10,-9999)
+
 	GR.write_raster(f_amerl, ref_wi.geo_transform, ref_wi.projection, m_lake,3)
 	print f_amerl
 

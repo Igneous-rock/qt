@@ -2,9 +2,7 @@ import ogr,gdal,osr
 import os,csv
 import geo_shape as GS
 import math,time
-#----------------------------------------------------------
-#G_dic_metrics = {0:'Area',1:'Perimeter',2:'Thickness',3:'inCompacity',4:'SDI',5:'Compacity'}
-#G_dic_km_vi = {}
+G_p_interest = 0.1
 #----------------------------------------------------------------------- single
 def shapefile_analysis(f_ref,f_rst,nm_ref):
 	p_analysis = './txt_analysis/'
@@ -19,52 +17,51 @@ def shapefile_analysis(f_ref,f_rst,nm_ref):
 
 	lst_metrics = ['Area','Perimeter','Thickness','inCompacity']#,'SDI','Compacity']
 	for metric in lst_metrics:
-		dic_Kc_DICms = compare_single_metric(nm_data,dic_cm_ref,dic_cm_rst,metric,p_analysis)
-		analysis_on_factors(dic_Kc_DICms,metric,p_analysis,nm_wi)
+		dic_ui_ms = compare_single_metric(nm_data,dic_cm_ref,dic_cm_rst,metric,p_analysis)
+		#if metric == 'Area':
+		analysis_on_factors(dic_ui_ms,metric,p_analysis,nm_wi)
 		
 	
 #----------------------------------------------------------------------- 5 factors for chart
-def analysis_on_factors(dic_Kc_DICms,metric,p_analysis,nm_wi):
+def analysis_on_factors(dic_ui_ms,metric,p_analysis,nm_wi):
 	lst_factor = ['PathRow','path','row','year','month']
-	p_interest = 0.1
 	for factor in lst_factor:
-		dic_f_count = sub__info_2_count(dic_Kc_DICms,metric,p_analysis,factor,p_interest)
-		sub__write_csv(dic_f_count,factor,p_analysis,nm_wi,p_interest)
+		dic_f_count = sub__info_2_count(dic_ui_ms,metric,p_analysis,factor)
+		sub__write_csv(dic_f_count,metric,factor,p_analysis,nm_wi)
 		
-def sub__info_2_count(dic_Kc_DICms,metric,p_analysis,factor,p_interest):
-	uis = dic_Kc_DICms.keys()
-	dic_f_m = {}
+def sub__info_2_count(dic_ui_ms,metric,p_analysis,factor):
+	uis = dic_ui_ms.keys()
+	dic_f_ms = {}
 	metric_diff = 'diff_' + metric
 	for ui in uis:
-		k_f = dic_Kc_DICms[ui][factor]
-		if not k_f in dic_f_m:
-			dic_f_m[k_f] = [dic_Kc_DICms[ui][metric_diff]]
+		k_f = dic_ui_ms[ui][factor]
+		if not k_f in dic_f_ms:
+			dic_f_ms[k_f] = [dic_ui_ms[ui][metric_diff]]
 		else:
-			dic_f_m[k_f].append(dic_Kc_DICms[ui][metric_diff])
-	
-	
+			dic_f_ms[k_f].append(dic_ui_ms[ui][metric_diff])
+
 	dic_f_count = {}
-	ks = dic_f_m.keys()
+	ks = dic_f_ms.keys()
 	for k in ks:
 		dic_f_count[k] = [0,0]
-		for area in dic_f_m[k]:
-			#print area
-			if abs(area) < p_interest:
-				dic_f_count[k][0] += 1
-			else:
+		for area in dic_f_ms[k]:
+			if math.fabs(area) < G_p_interest:
 				dic_f_count[k][1] += 1
+			else:
+				dic_f_count[k][0] += 1
+
 	return dic_f_count
 	
-def sub__write_csv(dic_f_count,factor,p_analysis,nm_wi,p_interest):
-	f_csv = p_analysis + nm_wi + '_' + factor +'.csv'
+def sub__write_csv(dic_f_count,metric,factor,p_analysis,nm_wi):
+	f_csv = p_analysis + nm_wi + '_' + metric + '_' + factor +'.csv'
 	writer = csv.writer(file(f_csv, 'wb'))
 	
-	writer.writerow([factor,'total','num(error>%.1f)'%p_interest,'percent'])
+	writer.writerow([factor,'total','num(error>%.1f)'%G_p_interest,'percent'])
 	ks = dic_f_count.keys()
 	ks.sort()
 	for k in ks:
-		n_error = dic_f_count[k][1]
-		total = dic_f_count[k][0] + n_error
+		n_error = dic_f_count[k][0]
+		total = dic_f_count[k][1] + n_error
 		r_p = float(n_error) / float(total) #* 100.0
 		writer.writerow([k,str(total),str(n_error), format(r_p, '.2%')])#'%5.2f\%'%r_p])
 	'''
@@ -77,30 +74,36 @@ def compare_single_metric(nm_data,dic_cm_ref,dic_cm_rst,metric,p_analysis):
 	writer = csv.writer(file(f_csv, 'wb'))
 	print f_csv
 	lst_info = ['Id','Name','PathRow','path','row','year','month']
-	lst_new = ['ref_'+metric,'rst_'+metric,'diff_'+metric]
+	lst_new = ['ref_'+metric,'rst_'+metric,'diff_'+metric,'abs_'+metric]
 	head = ['Code_uniq'] + lst_info + lst_new
 	writer.writerow(head)
 	
+	dic_ui_ms = {}
 	ks = dic_cm_rst.keys()
 	ks.sort()
 	for k in ks:
+		#dic_temp = {}
 		r_ref = dic_cm_ref[k][metric]
 		r_rst = dic_cm_rst[k][metric]
-		#r_diff = math.fabs(r_rst - r_ref) / r_ref
 		r_diff = (r_rst - r_ref) / r_ref
+		r_abs = math.fabs(r_diff)
 		
 		s_ref = '%10f'%r_ref
 		s_rst = '%10f'%r_rst
 		s_diff = '%10f'%r_diff
+		s_abs  = '%10f'%r_abs
 		lst_temp = []
 		for info in lst_info:
 			lst_temp.append(dic_cm_rst[k][info])
-		lst_r_new = [r_ref,r_rst,r_diff]
+		lst_r_new = [r_ref,r_rst,r_diff,r_abs]
+		dic_temp = dic_cm_rst[k]
 		for j in range(3):
-			dic_cm_rst[k][lst_new[j]] = lst_r_new[j]
-		line = [k] + lst_temp + [s_ref,s_rst,s_diff]
+			dic_temp[lst_new[j]] = lst_r_new[j]
+			
+		dic_ui_ms[k] = dic_temp
+		line = [k] + lst_temp + [s_ref,s_rst,s_diff,s_abs]
 		writer.writerow(line)
-	return dic_cm_rst
+	return dic_ui_ms
 	
 #---------------------------------------------------------------------------------------------------	
 def sub__get_rectangle(geom):
